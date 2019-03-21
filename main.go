@@ -35,6 +35,11 @@ func main(){
      getRooms(c)  
     })
 
+    //根据房间ID获取房间信息
+    router.GET("/room", func(c *gin.Context) {
+        getRoomByRoomId(c)  
+       })
+
     //更新房间状态api
     router.POST("/currentState", func(c *gin.Context) {
         updateRoom(c)
@@ -51,6 +56,22 @@ func getRooms(c *gin.Context){
     })
 }
 
+//获取所有房间信息和状态服务
+func getRoomByRoomId(c *gin.Context){
+    roomId := c.DefaultQuery("roomId","");
+    var r Room;
+    for j := 0; j < len(rooms); j++ {
+        room := rooms[j];
+        rId := room.RoomId
+        if (rId == roomId) {
+           r = room;
+        }
+    }
+    c.JSON(200, gin.H{
+        "data" : r,
+    })
+}
+
 // 更新接入的房间状态信息
 func updateRoom(c *gin.Context){
     var r Room;
@@ -58,7 +79,7 @@ func updateRoom(c *gin.Context){
     if err != nil {
         fmt.Println(err)
     }
-     for j := 0; j < len(rooms); j++ {
+    for j := 0; j < len(rooms); j++ {
         room := rooms[j];
         rId := room.RoomId
         if (rId == r.RoomId) {
