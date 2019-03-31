@@ -2,12 +2,12 @@ package main
 
 import (
     "github.com/gin-gonic/gin"
-    "github.com/gorilla/websocket"
+    // "github.com/gorilla/websocket"
     "net/http"
     "fmt"
-    "time"
-    "encoding/json"
-    "github.com/satori/go.uuid"
+    // "time"
+    // "encoding/json"
+    // "github.com/satori/go.uuid"
 )
 
 type Room struct {
@@ -221,141 +221,141 @@ func initRooms(){
 }
 
 
-// 实现websocket
-type ClientManager struct {
-    clients    map[*Client]bool
-    broadcast  chan []byte
-    register   chan *Client
-    unregister chan *Client
-}
+// // 实现websocket
+// type ClientManager struct {
+//     clients    map[*Client]bool
+//     broadcast  chan []byte
+//     register   chan *Client
+//     unregister chan *Client
+// }
 
-type Client struct {
-    id     string
-    roomId string
-    socket *websocket.Conn
-    send   chan []byte
-}
+// type Client struct {
+//     id     string
+//     roomId string
+//     socket *websocket.Conn
+//     send   chan []byte
+// }
 
-type Message struct {
-    Sender    string `json:"sender,omitempty"`
-    Recipient string `json:"recipient,omitempty"`
-    Content   string `json:"content,omitempty"`
-}
+// type Message struct {
+//     Sender    string `json:"sender,omitempty"`
+//     Recipient string `json:"recipient,omitempty"`
+//     Content   string `json:"content,omitempty"`
+// }
 
-var manager = ClientManager{
-    broadcast:  make(chan []byte),
-    register:   make(chan *Client),
-    unregister: make(chan *Client),
-    clients:    make(map[*Client]bool),
-}
+// var manager = ClientManager{
+//     broadcast:  make(chan []byte),
+//     register:   make(chan *Client),
+//     unregister: make(chan *Client),
+//     clients:    make(map[*Client]bool),
+// }
 
-func (manager *ClientManager) start() {
-    fmt.Println("manager start")
+// func (manager *ClientManager) start() {
+//     fmt.Println("manager start")
 
-    for {
-        select {
-        case conn := <-manager.register:
-            manager.clients[conn] = true
-            jsonMessage, _ := json.Marshal(&Message{Content: "/A new socket has connected."})
-            manager.send(jsonMessage, conn)// 通知其他接入设备，有新的设备接入，忽略自己本身
-            fmt.Println("目前接入的设备有：")
-            for conn := range manager.clients {
-                fmt.Println(conn.id)
-            }
-        case conn := <-manager.unregister:
-            if _, ok := manager.clients[conn]; ok {
-                close(conn.send)
-                delete(manager.clients, conn)
-                jsonMessage, _ := json.Marshal(&Message{Content: "/A socket has disconnected."})
-                manager.send(jsonMessage, conn)//通知其他接入设备，设备断开，忽略自己本身
-            }
-        case message := <-manager.broadcast:
-            for conn := range manager.clients {
-                select {
-                case conn.send <- message:
-                default:
-                    close(conn.send)
-                    delete(manager.clients, conn)
-                }
-            }
-        }
-    }
-}
+//     for {
+//         select {
+//         case conn := <-manager.register:
+//             manager.clients[conn] = true
+//             jsonMessage, _ := json.Marshal(&Message{Content: "/A new socket has connected."})
+//             manager.send(jsonMessage, conn)// 通知其他接入设备，有新的设备接入，忽略自己本身
+//             fmt.Println("目前接入的设备有：")
+//             for conn := range manager.clients {
+//                 fmt.Println(conn.id)
+//             }
+//         case conn := <-manager.unregister:
+//             if _, ok := manager.clients[conn]; ok {
+//                 close(conn.send)
+//                 delete(manager.clients, conn)
+//                 jsonMessage, _ := json.Marshal(&Message{Content: "/A socket has disconnected."})
+//                 manager.send(jsonMessage, conn)//通知其他接入设备，设备断开，忽略自己本身
+//             }
+//         case message := <-manager.broadcast:
+//             for conn := range manager.clients {
+//                 select {
+//                 case conn.send <- message:
+//                 default:
+//                     close(conn.send)
+//                     delete(manager.clients, conn)
+//                 }
+//             }
+//         }
+//     }
+// }
 
-func (manager *ClientManager) send(message []byte, ignore *Client) {
-    for conn := range manager.clients {
-        if conn != ignore {
-            conn.send <- message
-        }
-    }
-}
+// func (manager *ClientManager) send(message []byte, ignore *Client) {
+//     for conn := range manager.clients {
+//         if conn != ignore {
+//             conn.send <- message
+//         }
+//     }
+// }
 
-func (c *Client) read() {
+// func (c *Client) read() {
 
-    defer func() {
-        manager.unregister <- c
-        c.socket.Close()
-        fmt.Println("unregister","id:",c.id,"--roomId:",c.roomId)
+//     defer func() {
+//         manager.unregister <- c
+//         c.socket.Close()
+//         fmt.Println("unregister","id:",c.id,"--roomId:",c.roomId)
 
-    }()
+//     }()
 
-    for {
-        _, message, err := c.socket.ReadMessage()
-        if err != nil {
-            manager.unregister <- c
-            c.socket.Close()
-            break
-        }
-        fmt.Println("读取socket",message)
-        data,err:= json.Marshal(roomDB)//读取全新的房间信息
-        if err != nil {
-            fmt.Println(err)
+//     for {
+//         _, message, err := c.socket.ReadMessage()
+//         if err != nil {
+//             manager.unregister <- c
+//             c.socket.Close()
+//             break
+//         }
+//         fmt.Println("读取socket",message)
+//         data,err:= json.Marshal(roomDB)//读取全新的房间信息
+//         if err != nil {
+//             fmt.Println(err)
 
-        }
-        // jsonMessage, _ := json.Marshal(&Message{Sender: c.id, Content: string(message)})
+//         }
+//         // jsonMessage, _ := json.Marshal(&Message{Sender: c.id, Content: string(message)})
         
-        manager.broadcast <- data
-    }
-}
+//         manager.broadcast <- data
+//     }
+// }
 
-func (c *Client) write() {
+// func (c *Client) write() {
 
-    defer func() {
-        c.socket.Close()
-    }()
+//     defer func() {
+//         c.socket.Close()
+//     }()
 
-    for {
-        select {
-        case message, ok := <-c.send:
-            if !ok {
-                c.socket.WriteMessage(websocket.CloseMessage, []byte{})
-                return
-            }
+//     for {
+//         select {
+//         case message, ok := <-c.send:
+//             if !ok {
+//                 c.socket.WriteMessage(websocket.CloseMessage, []byte{})
+//                 return
+//             }
 
-            c.socket.WriteMessage(websocket.TextMessage, message)
-        }
-    }
-}
+//             c.socket.WriteMessage(websocket.TextMessage, message)
+//         }
+//     }
+// }
 
-func ws(res http.ResponseWriter, req *http.Request) {
-    conn, error := (&websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}).Upgrade(res, req, nil)
-    if error != nil {
-        http.NotFound(res, req)
-        return
-    }
-    uid,_ := uuid.NewV4()
-    rId := "";
-    dType:= req.Header.Get("deviceType")
-    if(dType == "room"){
-        rId = req.Header.Get("roomId") 
-    }
+// func ws(res http.ResponseWriter, req *http.Request) {
+//     conn, error := (&websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}).Upgrade(res, req, nil)
+//     if error != nil {
+//         http.NotFound(res, req)
+//         return
+//     }
+//     uid,_ := uuid.NewV4()
+//     rId := "";
+//     dType:= req.Header.Get("deviceType")
+//     if(dType == "room"){
+//         rId = req.Header.Get("roomId") 
+//     }
 
-    client := &Client{id: uid.String() ,roomId:rId,socket: conn, send: make(chan []byte)}
-    manager.register <- client
+//     client := &Client{id: uid.String() ,roomId:rId,socket: conn, send: make(chan []byte)}
+//     manager.register <- client
 
-    go client.read()
-    go client.write()
-}
+//     go client.read()
+//     go client.write()
+// }
 
 
 // func (manager *ClientManager) checkAlive() {
@@ -380,39 +380,39 @@ func ws(res http.ResponseWriter, req *http.Request) {
 
 //     }
 // }
-func (manager *ClientManager) checkAlive2() {
-    fmt.Println("manager checkAlive")
-    ticker := time.NewTicker(10 * time.Second) 
-	defer ticker.Stop()
-	for {
-		select {
-        case <-ticker.C:
-            fmt.Println("for checkAlive")
-            fmt.Println("alive now socket client")
-            for conn := range manager.clients {
-                fmt.Println("alive:",conn.id,"房间id:",conn.roomId)
-            }
+// func (manager *ClientManager) checkAlive2() {
+//     fmt.Println("manager checkAlive")
+//     ticker := time.NewTicker(10 * time.Second) 
+// 	defer ticker.Stop()
+// 	for {
+// 		select {
+//         case <-ticker.C:
+//             fmt.Println("for checkAlive")
+//             fmt.Println("alive now socket client")
+//             for conn := range manager.clients {
+//                 fmt.Println("alive:",conn.id,"房间id:",conn.roomId)
+//             }
 
-            for j := 0; j < len(roomDB); j++ {
-                room := roomDB[j];
-                rId := room.RoomId
-                alive := false
-                for conn := range manager.clients {
-                        if(rId == conn.roomId){
-                            alive = true
-                            break
-                        }else{
-                            continue
-                        } 
-                     }
-                     roomDB[j].RoomState=alive;
+//             for j := 0; j < len(roomDB); j++ {
+//                 room := roomDB[j];
+//                 rId := room.RoomId
+//                 alive := false
+//                 for conn := range manager.clients {
+//                         if(rId == conn.roomId){
+//                             alive = true
+//                             break
+//                         }else{
+//                             continue
+//                         } 
+//                      }
+//                      roomDB[j].RoomState=alive;
    
-            }
+//             }
 
-		}
-	}
+// 		}
+// 	}
 
-}
+// }
 
 
 
